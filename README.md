@@ -42,10 +42,5 @@ The following dependencies are required to run the keylogger:
 
 6. If you have enabled remote data transmission, the keylogger will send the recorded data to the specified server at regular intervals.
 
-## Important Note
 
-**Please use this keylogger responsibly and in compliance with applicable laws and regulations. Ensure that you have proper authorization before using it on any device. Respect the privacy and legal rights of others.**
-
----
-
-Feel free to customize the README file further based on your requirements and include any additional information or instructions that may be relevant.
+contact developer: aadarshmourya16@gmail.com
